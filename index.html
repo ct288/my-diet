@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>NutriDaily | 个人营养与晨练日志</title>
+  
+  <!-- PWA & Mobile Web App Settings -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NutriDaily">
+  <meta name="theme-color" content="#030712">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Smooth transitions and custom scrollbar */
+    * {
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    input, textarea {
+      user-select: text;
+    }
+    body {
+      background-color: #030712;
+      color: #f3f4f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .safe-top {
+      padding-top: max(env(safe-area-inset-top), 12px);
+    }
+    .safe-bottom {
+      padding-bottom: max(env(safe-area-inset-bottom), 16px);
+    }
+    .shake {
+      animation: shake 0.4s ease-in-out;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-950 text-gray-100 flex flex-col antialiased selection:bg-emerald-500 selection:text-white">
+
+  <!-- 1. PIN LOCK SCREEN OVERLAY -->
+  <div id="pin-screen" class="fixed inset-0 z-50 bg-gray-950 flex flex-col justify-between items-center px-6 py-12 transition-all duration-300">
+    <div class="flex flex-col items-center mt-8">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 mb-4">
+        <i data-lucide="shield-check" class="w-8 h-8 text-white"></i>
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight text-white">NutriDaily</h1>
+      <p class="text-sm text-gray-400 mt-1">专属个人营养与健康私密日志</p>
+    </div>
+
+    <!-- PIN Dots -->
+    <div class="flex flex-col items-center">
+      <p id="pin-label" class="text-xs uppercase tracking-widest text-emerald-400 font-semibold mb-6">输入 6 位访问密码</p>
+      <div id="pin-dots" class="flex space-x-4 mb-4">
+        <div class="w-4 h-4 rounded-full border-2 border-gray-600 transition-colors"></div>
+        <div class="w-4 h-4 rounded-full border-2 border-gray-600 transition-colors"></div>
+        <div class="w-4 h-4 rounded-full border-2 border-gray-600 transition-colors"></div>
+        <div class="w-4 h-4 rounded-full border-2 border-gray-600 transition-colors"></div>
+        <div class="w-4 h-4 rounded-full border-2 border-gray-600 transition-colors"></div>
+        <div class="w-4 h-4 rounded-full border-2 border-gray-600 transition-colors"></div>
+      </div>
+      <p id="pin-error" class="text-xs text-rose-400 h-4 font-medium"></p>
+    </div>
+
+    <!-- Keypad -->
+    <div class="w-full max-w-xs grid grid-cols-3 gap-4 mb-4">
+      <button class="keypad-btn h-16 rounded-2xl bg-gray-900 active:bg-gray-800 text-2xl font-medium text-white flex items-center justify-center shadow-sm" data-val="1">1</button>
+      <button class="keypad-btn h-16 rounded-2xl bg-gray-900 active:bg-gray-800 text-2xl font-medium text-white flex items-center justify-center shadow-sm" data-val="2">2</button>
+      <button class="keypad-btn h-16 rounded-2xl bg-gray-900 active:bg-gray-800 text-2xl font-medium text-white flex items-center justify-center shadow-sm" data-val="3">3</button>
+      <button class="keypad-btn h-16 rounded-2xl bg-gray-900 active:bg-gray-800 text-2xl font-medium text-white flex items-center justify-center shadow-sm" data-val="4">4</button>
+      <button class="keypad-btn h-16 rounded-2xl bg-gray-900 active:bg-gray-800 text-2xl font-medium text-white flex items-center justify-center shadow-sm" data-val="5">5</button>
+      <button class="keypad-btn h-16 rounded-2xl bg-gray-900 active:bg-gray-800 text-2xl font-medium text-white flex items-center justify-center shadow-sm" data-val="6">6</button>
+      <button class="keypad-btn h-16 rounded-2xl bg-gray-900 active:bg-gray-800 text-2xl font-medium text-white flex items-center justify-center shadow-sm" data-val="7">7</button>
+      <button class="keypad-btn h-16 rounded-2xl bg-gray-900 active:bg-gray-800 text-2xl font-medium text-white flex items-center justify-center shadow-sm" data-val="8">8</button>
+      <button class="keypad-btn h-16 rounded-2xl bg-gray-900 active:bg-gray-800 text-2xl font-medium text-white flex items-center justify-center shadow-sm" data-val="9">9</button>
+      <button class="h-16 rounded-2xl text-xs font-semibold text-gray-400 flex items-center justify-center active:text-white" id="btn-clear-pin">清空</button>
+      <button class="keypad-btn h-16 rounded-2xl bg-gray-900 active:bg-gray-800 text-2xl font-medium text-white flex items-center justify-center shadow-sm" data-val="0">0</button>
+      <button class="h-16 rounded-2xl text-gray-400 flex items-center justify-center active:text-white" id="btn-backspace">
+        <i data-lucide="delete" class="w-6 h-6"></i>
+      </button>
+    </div>
+
+    <div class="text-xs text-gray-500 text-center">
+      默认初始密码: <span class="font-mono text-gray-400">668899</span> (可在设置中修改)
+    </div>
+  </div>
+
+
+  <!-- 2. MAIN APPLICATION -->
+  <div id="app" class="flex-1 flex flex-col max-w-lg mx-auto w-full pb-28">
+    
+    <!-- Top Bar -->
+    <header class="safe-top px-4 py-3 bg-gray-900/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-800/80 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <div class="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-sm shadow">
+          N
+        </div>
+        <span class="font-bold text-base tracking-tight text-white">NutriDaily</span>
+        
+        <!-- Cloud Sync Badge -->
+        <div id="sync-status" class="flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-950 text-emerald-400 border border-emerald-800/50 cursor-pointer" title="点击查看同步状态">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-1"></span>
+          <span>已同步</span>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-1">
+        <button id="btn-open-calendar" class="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 active:scale-95 transition" title="日历记录">
+          <i data-lucide="calendar" class="w-5 h-5"></i>
+        </button>
+        <button id="btn-open-settings" class="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 active:scale-95 transition" title="设置与云同步">
+          <i data-lucide="settings" class="w-5 h-5"></i>
+        </button>
+        <button id="btn-lock" class="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 active:scale-95 transition" title="立即锁定">
+          <i data-lucide="lock" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Date Switcher -->
+    <div class="px-4 py-3 bg-gray-900/40 border-b border-gray-800/50 flex items-center justify-between">
+      <button id="btn-prev-day" class="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 active:scale-95">
+        <i data-lucide="chevron-left" class="w-5 h-5"></i>
+      </button>
+
+      <div class="flex flex-col items-center">
+        <div class="flex items-center space-x-2">
+          <span id="display-date" class="font-semibold text-sm text-gray-100">2026年10月26日</span>
+          <span id="display-weekday" class="text-xs px-1.5 py-0.5 rounded bg-gray-800 text-emerald-400 font-medium">周一</span>
+        </div>
+        <button id="btn-today" class="text-[11px] text-emerald-500 hover:underline mt-0.5 hidden">回到今日</button>
+      </div>
+
+      <button id="btn-next-day" class="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 active:scale-95">
+        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Quick Preset Banner (Bedtime 1-Click Fill) -->
+    <div class="p-4">
+      <div class="bg-gradient-to-r from-emerald-950/60 via-gray-900 to-teal-950/40 border border-emerald-800/40 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="flex items-center space-x-1.5 text-emerald-400 text-xs font-semibold mb-1">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>睡前极速打卡</span>
+            </div>
+            <h3 class="text-sm font-bold text-white">一键应用今日标准食谱？</h3>
+            <p class="text-xs text-gray-400 mt-0.5">自动填充满“早大午中晚小”及晨练全套方案</p>
+          </div>
+          <button id="btn-quick-fill-all" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-semibold text-xs rounded-xl shadow-md shadow-emerald-700/30 transition flex items-center space-x-1">
+            <span>一键填满</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nutrition Summary & Pyramid Gauge -->
+    <div class="px-4 space-y-3 mb-4">
+      
+      <!-- Primary Targets Card -->
+      <div class="bg-gray-900/90 border border-gray-800 rounded-2xl p-4 shadow-sm">
+        <div class="flex justify-between items-center mb-3">
+          <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">今日能量与宏量目标 (55kg 精瘦增肌)</span>
+          <span id="target-calories-text" class="text-xs text-emerald-400 font-mono font-medium">目标 ~1950 kcal</span>
+        </div>
+
+        <!-- Calories & Protein Progress -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <!-- Calories -->
+          <div class="bg-gray-950/70 p-3 rounded-xl border border-gray-800/80">
+            <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+              <span>总热量</span>
+              <span id="calories-pct" class="font-mono text-emerald-400">0%</span>
+            </div>
+            <div class="flex items-baseline space-x-1">
+              <span id="total-calories" class="text-xl font-bold font-mono text-white">0</span>
+              <span class="text-xs text-gray-500">kcal</span>
+            </div>
+            <div class="w-full bg-gray-800 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div id="calories-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Protein -->
+          <div class="bg-gray-950/70 p-3 rounded-xl border border-gray-800/80">
+            <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+              <span>优质蛋白</span>
+              <span id="protein-target-hint" class="font-mono text-cyan-400">目标 85g</span>
+            </div>
+            <div class="flex items-baseline space-x-1">
+              <span id="total-protein" class="text-xl font-bold font-mono text-white">0</span>
+              <span class="text-xs text-gray-500">g</span>
+            </div>
+            <div class="w-full bg-gray-800 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div id="protein-bar" class="bg-cyan-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Carbs & Fat -->
+        <div class="flex items-center justify-between text-xs px-2 py-1.5 bg-gray-950/40 rounded-lg text-gray-400 border border-gray-800/40 font-mono">
+          <div>碳水化合物: <span id="total-carbs" class="font-bold text-gray-200">0g</span></div>
+          <div>优质脂质: <span id="total-fat" class="font-bold text-gray-200">0g</span></div>
+          <div>无麸质状态: <span id="gf-status-pill" class="text-emerald-400 font-semibold">100% 安全</span></div>
+        </div>
+
+        <!-- 倒金字塔结构比例条 (Inverted Pyramid Bar) -->
+        <div class="mt-4 pt-3 border-t border-gray-800/60">
+          <div class="flex items-center justify-between text-xs mb-1.5">
+            <span class="font-medium text-gray-300 flex items-center space-x-1">
+              <span>三餐能量结构 (早大、午中、晚小)</span>
+            </span>
+            <span id="pyramid-badge" class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-medium">倒金字塔达标</span>
+          </div>
+          
+          <!-- Stacked Bar -->
+          <div class="w-full h-3 rounded-full bg-gray-950 overflow-hidden flex p-0.5 space-x-0.5 border border-gray-800">
+            <div id="bar-breakfast" class="bg-amber-500 rounded-l-full transition-all duration-300 h-full" style="width: 40%" title="早餐"></div>
+            <div id="bar-lunch" class="bg-emerald-500 transition-all duration-300 h-full" style="width: 35%" title="午餐"></div>
+            <div id="bar-dinner" class="bg-indigo-500 rounded-r-full transition-all duration-300 h-full" style="width: 25%" title="晚餐"></div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-gray-400 mt-2 px-1 font-mono">
+            <div class="flex items-center space-x-1">
+              <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+              <span>早: <b id="pct-breakfast" class="text-gray-200">0%</b></span>
+            </div>
+            <div class="flex items-center space-x-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+              <span>午: <b id="pct-lunch" class="text-gray-200">0%</b></span>
+            </div>
+            <div class="flex items-center space-x-1">
+              <span class="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>
+              <span>晚: <b id="pct-dinner" class="text-gray-200">0%</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- 3. DETAILED MEAL LOGGING SECTIONS -->
+    <div class="px-4 space-y-4">
+
+      <!-- SECTION 0: 晨起加餐与晨练 -->
+      <div class="meal-card bg-gray-900/90 border border-gray-800 rounded-2xl p-4 shadow-sm transition">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-xl bg-orange-950/80 border border-orange-800/50 flex items-center justify-center text-orange-400">
+              <i data-lucide="dumbbell" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-sm text-white">07:00 晨起与力量训练</h4>
+              <p class="text-[11px] text-gray-400">练前充盈糖原防低血糖</p>
+            </div>
+          </div>
+          <span id="workout-cal" class="text-xs font-mono text-gray-400">50 kcal</span>
+        </div>
+
+        <!-- Workout Checkbox -->
+        <div class="mt-3 bg-gray-950/60 p-2.5 rounded-xl border border-gray-800 flex items-center justify-between">
+          <label class="flex items-center space-x-2.5 cursor-pointer text-xs text-gray-200 font-medium">
+            <input type="checkbox" id="check-workout" class="w-4 h-4 rounded text-emerald-600 focus:ring-0 bg-gray-900 border-gray-700">
+            <span>45 分钟力量训练已完成</span>
+          </label>
+          <input type="text" id="input-workout-notes" placeholder="训练部位（如：胸肩/深蹲）" class="text-xs bg-gray-900 border border-gray-800 rounded-lg px-2 py-1 text-gray-300 w-32 focus:outline-none focus:border-emerald-600">
+        </div>
+
+        <!-- Pre-workout food -->
+        <div class="mt-2 text-xs text-gray-400 px-1 flex items-center justify-between">
+          <span>练前加餐: 温水 200ml + 半根香蕉</span>
+          <span class="text-gray-500 font-mono">1g 蛋 / 12g 碳</span>
+        </div>
+      </div>
+
+      <!-- SECTION 1: 早餐 (全天最大餐) -->
+      <div class="meal-card bg-gray-900/90 border border-amber-900/40 rounded-2xl p-4 shadow-sm relative">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-xl bg-amber-950/80 border border-amber-700/50 flex items-center justify-center text-amber-400">
+              <i data-lucide="sun" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-1.5">
+                <h4 class="font-bold text-sm text-white">08:05 早餐 (全天最大餐)</h4>
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800 font-semibold">黄金窗口</span>
+              </div>
+              <p class="text-[11px] text-gray-400">高蛋白 + 慢碳 + 优质脂质</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div id="breakfast-cal" class="text-sm font-bold font-mono text-amber-400">~750 kcal</div>
+            <div id="breakfast-protein" class="text-[10px] font-mono text-gray-400">~33g 蛋白</div>
+          </div>
+        </div>
+
+        <!-- Breakfast Items Quick Check/Edit -->
+        <div class="space-y-2 mt-3">
+          <textarea id="input-breakfast" rows="3" class="w-full bg-gray-950/80 border border-gray-800 rounded-xl p-2.5 text-xs text-gray-200 focus:outline-none focus:border-amber-600 leading-relaxed font-mono" placeholder="记录具体早餐内容..."></textarea>
+          
+          <!-- Quick Tags -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-breakfast" data-food="3个水煮蛋(全蛋)">+3个水煮蛋</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-breakfast" data-food="250ml自制无糖酸奶">+250ml酸奶</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-breakfast" data-food="200g蒸红薯(慢碳)">+200g蒸红薯</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-breakfast" data-food="10ml特级初榨橄榄油">+10ml橄榄油</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-breakfast" data-food="半根香蕉(快碳)">+半根香蕉</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-breakfast" data-food="15g核桃仁">+15g核桃</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 2: 午餐 (中等餐盘) -->
+      <div class="meal-card bg-gray-900/90 border border-emerald-900/40 rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-xl bg-emerald-950/80 border border-emerald-700/50 flex items-center justify-center text-emerald-400">
+              <i data-lucide="salad" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-1.5">
+                <h4 class="font-bold text-sm text-white">12:30 午餐 (中等餐盘)</h4>
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold">2:1:1 稳糖</span>
+              </div>
+              <p class="text-[11px] text-gray-400">1拳杂粮 + 1掌心肉 + 2捧绿叶菜</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div id="lunch-cal" class="text-sm font-bold font-mono text-emerald-400">~650 kcal</div>
+            <div id="lunch-protein" class="text-[10px] font-mono text-gray-400">~28g 蛋白</div>
+          </div>
+        </div>
+
+        <div class="space-y-2 mt-3">
+          <textarea id="input-lunch" rows="3" class="w-full bg-gray-950/80 border border-gray-800 rounded-xl p-2.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-600 leading-relaxed font-mono" placeholder="记录具体午餐内容..."></textarea>
+          
+          <!-- Quick Tags -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-lunch" data-food="1拳杂粮饭(180g)">+1拳杂粮饭</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-lunch" data-food="120g去皮鸡腿排">+120g鸡腿肉</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-lunch" data-food="120g清蒸鱼/虾仁">+120g清蒸鱼</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-lunch" data-food="100g清炖牛腱子">+100g牛腱子</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-lunch" data-food="250g清炒西兰花/菜心">+250g深绿叶菜</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: 晚餐 (最小轻盈餐) -->
+      <div class="meal-card bg-gray-900/90 border border-indigo-900/40 rounded-2xl p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 rounded-xl bg-indigo-950/80 border border-indigo-700/50 flex items-center justify-center text-indigo-400">
+              <i data-lucide="moon" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-1.5">
+                <h4 class="font-bold text-sm text-white">19:00 晚餐 (极简轻盈餐)</h4>
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-semibold">护深睡眠</span>
+              </div>
+              <p class="text-[11px] text-gray-400">低胃肠负担 · 色氨酸与镁</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div id="dinner-cal" class="text-sm font-bold font-mono text-indigo-400">~450 kcal</div>
+            <div id="dinner-protein" class="text-[10px] font-mono text-gray-400">~22g 蛋白</div>
+          </div>
+        </div>
+
+        <div class="space-y-2 mt-3">
+          <textarea id="input-dinner" rows="3" class="w-full bg-gray-950/80 border border-gray-800 rounded-xl p-2.5 text-xs text-gray-200 focus:outline-none focus:border-indigo-600 leading-relaxed font-mono" placeholder="记录具体晚餐内容..."></textarea>
+          
+          <!-- Quick Tags -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-dinner" data-food="1小碗小米粥(助眠)">+1小碗小米粥</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-dinner" data-food="100g蒸山药/南瓜">+100g蒸山药</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-dinner" data-food="白灼鲜虾8-10只">+白灼鲜虾</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-dinner" data-food="半盒温热嫩豆腐">+温热嫩豆腐</button>
+            <button class="tag-btn text-[11px] px-2 py-0.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300" data-target="input-dinner" data-food="200g温热冬瓜/小白菜">+冬瓜/小白菜</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 4: 睡前身体状态与无麸质安全标记 -->
+      <div class="bg-gray-900/90 border border-gray-800 rounded-2xl p-4 shadow-sm">
+        <h4 class="font-bold text-sm text-white mb-3 flex items-center space-x-2">
+          <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i>
+          <span>睡前身体状态与过敏排查</span>
+        </h4>
+
+        <!-- Gluten-Free Switch -->
+        <div class="bg-gray-950/70 p-3 rounded-xl border border-gray-800/80 mb-3 flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <div class="w-7 h-7 rounded-lg bg-emerald-950 border border-emerald-800/60 flex items-center justify-center text-emerald-400">
+              <i data-lucide="shield" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-gray-200">今日 100% 严格无麸质</div>
+              <div class="text-[10px] text-gray-400">未接触小麦、大麦、污染酱油或面粉裹粉</div>
+            </div>
+          </div>
+          <input type="checkbox" id="check-gf" checked class="w-5 h-5 rounded text-emerald-600 focus:ring-0 bg-gray-900 border-gray-700">
+        </div>
+
+        <!-- Weight & Energy Tracking -->
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="bg-gray-950/60 p-2.5 rounded-xl border border-gray-800">
+            <span class="text-[11px] text-gray-400 block mb-1">今日体重 (kg)</span>
+            <div class="flex items-center space-x-1">
+              <input type="number" step="0.1" id="input-weight" value="55.0" class="w-20 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-sm font-bold text-white font-mono focus:outline-none focus:border-emerald-500">
+              <span class="text-xs text-gray-400">kg</span>
+            </div>
+          </div>
+
+          <div class="bg-gray-950/60 p-2.5 rounded-xl border border-gray-800">
+            <span class="text-[11px] text-gray-400 block mb-1">肠胃与精力感</span>
+            <select id="select-gut-feeling" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-emerald-500">
+              <option value="5">极度舒畅 ⭐⭐⭐⭐⭐</option>
+              <option value="4" selected>良好无胀气 ⭐⭐⭐⭐</option>
+              <option value="3">正常普通 ⭐⭐⭐</option>
+              <option value="2">微胀轻微不适 ⭐⭐</option>
+              <option value="1">疑有麸质反应 ⭐</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <input type="text" id="input-daily-notes" placeholder="睡前备注（如：下午专注度极高，无饭困）" class="w-full bg-gray-950/80 border border-gray-800 rounded-xl px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-emerald-600">
+      </div>
+
+    </div>
+
+    <!-- 4. BOTTOM FLOATING SAVE BAR -->
+    <div class="fixed bottom-0 left-0 right-0 z-40 bg-gray-950/90 backdrop-blur-md border-t border-gray-800/80 safe-bottom">
+      <div class="max-w-lg mx-auto px-4 py-3 flex items-center space-x-3">
+        <button id="btn-save-sync" class="flex-1 h-12 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 active:scale-[0.98] text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-900/40 transition flex items-center justify-center space-x-2">
+          <i data-lucide="cloud-upload" class="w-5 h-5"></i>
+          <span id="btn-save-text">保存今日打卡并同步云端</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- 5. CALENDAR MODAL -->
+  <div id="modal-calendar" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-3xl max-w-sm w-full p-5 shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-base text-white flex items-center space-x-2">
+          <i data-lucide="calendar" class="w-5 h-5 text-emerald-400"></i>
+          <span>打卡日历</span>
+        </h3>
+        <button id="btn-close-calendar" class="p-1 rounded-lg text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      
+      <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center text-xs mb-3">
+        <!-- Generated by JS -->
+      </div>
+
+      <div class="text-[11px] text-gray-400 text-center pt-2 border-t border-gray-800">
+        绿色小圆点表示已完成记录
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 6. SETTINGS & CLOUD SYNC MODAL -->
+  <div id="modal-settings" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-3xl max-w-sm w-full p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-base text-white flex items-center space-x-2">
+          <i data-lucide="settings" class="w-5 h-5 text-emerald-400"></i>
+          <span>设置与私有云同步</span>
+        </h3>
+        <button id="btn-close-settings" class="p-1 rounded-lg text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <!-- PIN Change -->
+        <div class="bg-gray-950 p-3 rounded-xl border border-gray-800">
+          <label class="font-semibold text-gray-300 block mb-1">修改 6 位访问密码</label>
+          <div class="flex space-x-2">
+            <input type="password" maxlength="6" id="input-new-pin" placeholder="新6位数字" class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white font-mono focus:outline-none focus:border-emerald-500">
+            <button id="btn-update-pin" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg font-medium">更新</button>
+          </div>
+        </div>
+
+        <!-- Cloud Sync Config -->
+        <div class="bg-gray-950 p-3 rounded-xl border border-gray-800">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-semibold text-gray-300">GitHub 私有云同步状态</span>
+            <span id="settings-sync-badge" class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800">已配置</span>
+          </div>
+          <div class="text-[11px] text-gray-400 space-y-1 mb-3">
+            <div>Gist ID: <span id="text-gist-id" class="font-mono text-gray-300">未设置</span></div>
+            <div>状态: 手机与电脑多端数据自动同步</div>
+          </div>
+          <button id="btn-copy-setup-link" class="w-full py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 rounded-xl font-medium flex items-center justify-center space-x-1">
+            <i data-lucide="share-2" class="w-4 h-4"></i>
+            <span>复制手机一键配置链接</span>
+          </button>
+        </div>
+
+        <!-- Export / Import -->
+        <div class="bg-gray-950 p-3 rounded-xl border border-gray-800 space-y-2">
+          <span class="font-semibold text-gray-300 block">数据备份与导出</span>
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btn-export-json" class="py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg font-medium text-center">导出 JSON</button>
+            <label class="py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg font-medium text-center cursor-pointer">
+              <span>导入备份</span>
+              <input type="file" id="file-import-json" accept=".json" class="hidden">
+            </label>
+          </div>
+        </div>
+
+        <!-- Reset to default -->
+        <div class="pt-2 text-center">
+          <button id="btn-force-sync" class="text-xs text-gray-400 hover:text-emerald-400 underline">立即从云端强制拉取最新数据</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 7. TOAST NOTIFICATION -->
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-gray-900/90 text-white border border-gray-700 shadow-xl backdrop-blur-md text-xs font-medium transition-all duration-300 opacity-0 pointer-events-none flex items-center space-x-2">
+    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toast-msg">操作成功</span>
+  </div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
